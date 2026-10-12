@@ -3,8 +3,8 @@
 - OS / Python / Gitleaks version:
 - `python -m pytest tests/ -q`:
 - `pre-commit run --all-files`:
-- Ledger verify:
-- Các lỗi còn lại:
+- Ledger verify: `True` sau lượt chạy CLI `--mock --as dpo` ở CP3e.
+- Các lỗi còn lại: chưa thấy lỗi chức năng đến hết CP3e; CP4 và CP5 chưa được kiểm.
 
 ## CP2 — baseline và bốn lure (đã chạy)
 
@@ -38,3 +38,11 @@
 - Kết quả: 10 passed trong 0.58 giây, không có test bị skip. `KH-000777` chỉ xuất hiện trong text attacker nên Run B không đọc; Run B vẫn đọc được khách gắn với ticket hợp lệ dưới `dpo`. Cả bốn lure đều bị chặn dưới `support_l1` và `dpo`; test riêng xác nhận PII trong ticket được che trước khi đưa cho hàm tóm tắt.
 - Lượt chạy đầu bằng Python hệ thống trong sandbox lỗi ở fixture sink vì không được mở socket localhost. Chạy lại bằng Python của `.venv` với quyền localhost thì các test pass. Đây là hạn chế môi trường chạy test, không phải lỗi của runner.
 - Giới hạn: test dùng sink riêng và reset log sau mỗi ca, nên `reports/sink.log` sau pytest không phải bằng chứng before/after. CP5 sẽ tạo `reports/attack-after.log` bằng lượt chạy CLI riêng.
+
+## CP3e — ledger
+
+- Lệnh đã chạy: `.venv/bin/python -m pytest tests/test_ledger.py -v --basetemp=.pytest_tmp`. Kết quả: 3 test passed trong 0.02 giây; test sửa dòng cũ xác nhận `verify()` trả `False` và test reason trống cũng trả `False`.
+- Chạy `.venv/bin/python -m agent.loop --mock --as dpo "Tổng hợp các ticket còn mở tuần này"` sau khi runner an toàn. CLI tổng hợp 45 ticket; `reports/ledger.jsonl` có 24 dòng và `verify()` trả `True`.
+- Trong ledger có 1 `search_docs` allow, 22 quyết định `read_customer` allow (gồm lần kiểm quyền trước khi mở private store), và 1 `http_post` deny với lý do `Dữ liệu restricted không được đi qua run có egress`. Mọi dòng đều có reason, `on_behalf_of=dpo`, `agent_id`, `run_id` và `expires_at`.
+- Đối chiếu các trường `cccd`, `phone`, `bank_account`, `email` trong dữ liệu synthetic: không giá trị thô nào xuất hiện trong ledger.
+- Giới hạn: hash chain chỉ kiểm các dòng còn trong file; tự nó không phát hiện được việc cắt bỏ dòng cuối hoặc viết lại cả file rồi tính lại chuỗi nếu thiếu mốc tin cậy bên ngoài.
