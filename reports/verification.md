@@ -19,3 +19,9 @@
 - Môi trường: Linux, Python 3.12.14, pytest 9.1.1.
 - Kết quả: 2 test passed; gold=118, pred=118, tp=118; precision=1.000, recall=1.000. Theo thang điểm PII của rubric, recall này vượt ngưỡng 95%.
 - Giới hạn: regex nhận diện tốt các mẫu trong bộ test của lab, nhưng chưa chứng minh nhận diện được mọi cách viết PII ngoài bộ mẫu hoặc tên người. Chưa có runner an toàn, nên kết quả này chưa chứng minh dữ liệu đã được che trước khi sang Run B.
+
+## CP3b — policy
+
+- Lệnh đã chạy: `python -m pytest tests/test_policy.py -v --basetemp=.pytest_tmp`.
+- Kết quả: 4 test passed trong 0.02 giây. Policy chặn `restricted` khi run có egress, kể cả với principal `dpo` hợp lệ; lời gọi `search_docs` hợp lệ vẫn được cho phép. Cả allow và deny đều có lý do.
+- Giới hạn: CP3b mới kiểm hàm quyết định. Runner còn là scaffold, nên chưa có bằng chứng policy được gọi ngay trước tool thật hoặc quyết định được ghi vào ledger. Phần đó thuộc CP3c/CP3d/CP3e.

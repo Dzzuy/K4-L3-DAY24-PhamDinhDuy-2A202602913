@@ -34,7 +34,14 @@ không phải xác thực người dùng production.
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+
+PRINCIPALS_FILE = Path(__file__).resolve().parent.parent / "data" / "principals.json"
+CLASSIFICATIONS = frozenset({"public", "internal", "restricted"})
 
 
 @dataclass(frozen=True)
@@ -52,4 +59,42 @@ class PolicyContext:
 
 
 def check(context: PolicyContext) -> tuple[bool, str]:
-    raise NotImplementedError("BƯỚC 3b: implement policy check")
+    """Decide a tool call before execution, using the lab's principal fixture."""
+    if context.data_classification not in CLASSIFICATIONS:
+        return False, "Phân loại dữ liệu không hợp lệ"
+    if context.data_classification == "restricted" and context.egress_enabled:
+        return False, "Dữ liệu restricted không được đi qua run có egress"
+    if context.delegation_depth < 0:
+        return False, "Độ sâu delegation không hợp lệ"
+
+    try:
+        principals = json.loads(PRINCIPALS_FILE.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        return False, f"Không đọc được danh sách principal: {type(exc).__name__}"
+    if not isinstance(principals, dict):
+        return False, "Danh sách principal không hợp lệ"
+
+    principal = principals.get(context.principal_id)
+    if not isinstance(principal, dict):
+        return False, "Principal không có trong danh sách quyền"
+    if context.request_purpose not in principal.get("purposes", ()):
+        return False, "Mục đích xử lý không được phép cho principal"
+    if not context.requested_tool:
+        return False, "Thiếu tên tool cần gọi"
+    if context.requested_tool not in principal.get("allowed_tools", ()):
+        return False, "Principal không được phép gọi tool này"
+    if context.requested_tool not in context.agent_scopes:
+        return False, "Tool nằm ngoài phạm vi quyền của agent"
+    if context.delegation_depth > 0 and context.requested_tool not in context.parent_scopes:
+        return False, "Tool nằm ngoài phạm vi quyền của agent cha"
+
+    try:
+        expires_at = datetime.fromisoformat(context.expires_at.replace("Z", "+00:00"))
+    except (AttributeError, ValueError):
+        return False, "Thời hạn run không hợp lệ"
+    if expires_at.tzinfo is None or expires_at.utcoffset() != timedelta(0):
+        return False, "Thời hạn run phải có múi giờ UTC"
+    if expires_at <= datetime.now(timezone.utc):
+        return False, "Thời hạn run đã hết"
+
+    return True, "Principal, mục đích, phạm vi quyền và thời hạn đều hợp lệ"
