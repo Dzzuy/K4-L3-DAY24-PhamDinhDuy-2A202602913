@@ -1,10 +1,10 @@
 # Verification — điền trước khi nộp
 
-- OS / Python / Gitleaks version:
+- OS / Python / Gitleaks version: Linux; Python 3.12.14 trong `.venv`; Gitleaks 8.30.1 (archive Linux x64 đã kiểm checksum).
 - `python -m pytest tests/ -q`:
-- `pre-commit run --all-files`:
+- `pre-commit run --all-files`: hook Gitleaks pass ở CP4.
 - Ledger verify: `True` sau lượt chạy CLI `--mock --as dpo` ở CP3e.
-- Các lỗi còn lại: chưa thấy lỗi chức năng đến hết CP3e; CP4 và CP5 chưa được kiểm.
+- Các lỗi còn lại: chưa thấy lỗi chức năng đến hết CP4; CP5 chưa được kiểm.
 
 ## CP2 — baseline và bốn lure (đã chạy)
 
@@ -46,3 +46,11 @@
 - Trong ledger có 1 `search_docs` allow, 22 quyết định `read_customer` allow (gồm lần kiểm quyền trước khi mở private store), và 1 `http_post` deny với lý do `Dữ liệu restricted không được đi qua run có egress`. Mọi dòng đều có reason, `on_behalf_of=dpo`, `agent_id`, `run_id` và `expires_at`.
 - Đối chiếu các trường `cccd`, `phone`, `bank_account`, `email` trong dữ liệu synthetic: không giá trị thô nào xuất hiện trong ledger.
 - Giới hạn: hash chain chỉ kiểm các dòng còn trong file; tự nó không phát hiện được việc cắt bỏ dòng cuối hoặc viết lại cả file rồi tính lại chuỗi nếu thiếu mốc tin cậy bên ngoài.
+
+## CP4 — dependency, hook và token giả
+
+- Sinh `requirements.lock` bằng `piptools compile --generate-hashes`; `.venv/bin/python -m pip install --require-hashes -r requirements.lock --quiet` chạy thành công.
+- Gitleaks 8.30.1: `git` scan với `--redact` trả exit 1 như dự kiến, đúng 1 finding ở commit `1bdd849`, file `lab-fake-secret.txt:1`, rule `lab24-synthetic-token`. `dir` scan trả exit 0, không có finding ở file hiện tại.
+- Cài hook bằng `pre-commit install`; `pre-commit run --all-files` pass.
+- `.venv/bin/python -m pytest tests/test_supply_chain.py -v --basetemp=.pytest_tmp`: 3 test passed trong 0.02 giây.
+- Lượt `piptools compile` đầu bị lỗi cache ngoài workspace không ghi được; sau khi chuyển cache sang `/tmp`, lượt trong sandbox bị chặn DNS PyPI. Chạy lại với quyền mạng đã tạo lock thành công. Gitleaks không có sẵn trong PATH nên đã tải bản chính thức vào `.venv/bin` và kiểm checksum trước khi chạy.
