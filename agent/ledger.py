@@ -37,12 +37,55 @@ rồi gọi verify() phải trả về False.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
 
 
+GENESIS_HASH = "0" * 64
+
+
+def _hash_entry(entry: dict) -> str:
+    payload = json.dumps(entry, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
 def append(entry: dict, path: Path) -> dict:
-    raise NotImplementedError("BƯỚC 3d: implement ledger append")
+    """Append one decision with a link to the preceding ledger line."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    existing = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+    if existing:
+        try:
+            previous_hash = json.loads(existing[-1])["hash"]
+        except (json.JSONDecodeError, KeyError, TypeError) as exc:
+            raise ValueError("Cannot append to a malformed ledger") from exc
+    else:
+        previous_hash = GENESIS_HASH
+
+    recorded = {**entry, "prev_hash": previous_hash}
+    recorded["hash"] = _hash_entry(recorded)
+    with path.open("a", encoding="utf-8") as output:
+        output.write(json.dumps(recorded, ensure_ascii=False) + "\n")
+    return recorded
 
 
 def verify(path: Path) -> bool:
-    raise NotImplementedError("BƯỚC 3d: implement ledger verify")
+    """Check reasons and every link/hash in the available file."""
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeError):
+        return False
+
+    previous_hash = GENESIS_HASH
+    for line in lines:
+        try:
+            entry = json.loads(line)
+            stored_hash = entry.pop("hash")
+            if not entry.get("reason") or entry.get("prev_hash") != previous_hash:
+                return False
+            if stored_hash != _hash_entry(entry):
+                return False
+            previous_hash = stored_hash
+        except (json.JSONDecodeError, KeyError, AttributeError, TypeError):
+            return False
+    return True

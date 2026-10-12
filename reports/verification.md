@@ -24,4 +24,10 @@
 
 - Lệnh đã chạy: `python -m pytest tests/test_policy.py -v --basetemp=.pytest_tmp`.
 - Kết quả: 4 test passed trong 0.02 giây. Policy chặn `restricted` khi run có egress, kể cả với principal `dpo` hợp lệ; lời gọi `search_docs` hợp lệ vẫn được cho phép. Cả allow và deny đều có lý do.
-- Giới hạn: CP3b mới kiểm hàm quyết định. Runner còn là scaffold, nên chưa có bằng chứng policy được gọi ngay trước tool thật hoặc quyết định được ghi vào ledger. Phần đó thuộc CP3c/CP3d/CP3e.
+- Giới hạn ở thời điểm CP3b: chỉ mới kiểm hàm quyết định; chưa có bằng chứng policy được gọi ngay trước tool thật hoặc quyết định được ghi vào ledger. CP3c đã kiểm tiếp ranh giới tool, còn CP3d/CP3e kiểm split và hash chain riêng.
+
+## CP3c — agent hành động thay người dùng (OBO)
+
+- Lệnh đã chạy: `python -m pytest tests/test_obo.py -v --basetemp=.pytest_tmp`.
+- Kết quả: 5 test passed trong 0.60 giây. `support_l1` bị chặn trước `read_customer`; `dpo` vẫn đọc được hồ sơ gắn với ticket hợp lệ. Test cũng kiểm scope của agent cha, principal không có trong fixture, thời hạn hết hiệu lực và các trường OBO trong ledger.
+- Giới hạn: `--as` chỉ chọn principal giả lập từ `data/principals.json`, chưa xác thực người dùng thật. CP3d sẽ kiểm riêng việc không đọc khách chỉ xuất hiện trong text của attacker; CP3e sẽ kiểm hash chain và ledger thật.
