@@ -126,7 +126,7 @@ def _decide(
 
 def _run_a(
     message: str, llm, principal_id: str, expires_at: str, ledger_path: Path,
-) -> tuple[list[dict], tuple[int, ...], bool]:
+) -> tuple[list[dict], tuple[int, ...], str | None]:
     agent_id = "lab24-agent/run-a"
     run_id = str(uuid4())
     if not _decide(
@@ -135,7 +135,7 @@ def _run_a(
         scopes=("search_docs",), principal_id=principal_id,
         expires_at=expires_at, ledger_path=ledger_path,
     ):
-        return [], (), False
+        return [], (), None
 
     docs = tools.search_docs(message)
     ticket_ids: set[int] = set()
@@ -145,7 +145,7 @@ def _run_a(
             ticket_ids.add(int(match.group(1)))
     injected = llm.find_injection("\n\n".join(doc["text"] for doc in docs))
     safe_docs = [{**doc, "text": pii.redact(doc["text"])} for doc in docs]
-    return safe_docs, tuple(sorted(ticket_ids)), injected is not None
+    return safe_docs, tuple(sorted(ticket_ids)), injected.target_url if injected else None
 
 
 def _run_b(
@@ -181,13 +181,13 @@ def handle(message: str, llm, log_dir: Path | None = None,
            principal_id: str = "support_l1") -> str:
     ledger_path = (Path(log_dir) / "ledger.jsonl") if log_dir is not None else DEFAULT_LEDGER_PATH
     expires_at = (_utc_now() + RUN_LIFETIME).isoformat()
-    safe_docs, ticket_ids, has_injection = _run_a(
+    safe_docs, ticket_ids, requested_url = _run_a(
         message, llm, principal_id, expires_at, ledger_path,
     )
     _run_b(ticket_ids, principal_id, expires_at, ledger_path)
-    if has_injection:
+    if requested_url is not None:
         _decide(
-            tool="http_post", args={"target": "local-sink"},
+            tool="http_post", args={"target_url": requested_url},
             classification="restricted", purpose="support-reply",
             agent_id="lab24-agent/egress-gate", run_id=str(uuid4()),
             scopes=("http_post",), principal_id=principal_id,

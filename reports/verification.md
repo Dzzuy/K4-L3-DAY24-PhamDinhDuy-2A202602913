@@ -30,4 +30,11 @@
 
 - Lệnh đã chạy: `python -m pytest tests/test_obo.py -v --basetemp=.pytest_tmp`.
 - Kết quả: 5 test passed trong 0.60 giây. `support_l1` bị chặn trước `read_customer`; `dpo` vẫn đọc được hồ sơ gắn với ticket hợp lệ. Test cũng kiểm scope của agent cha, principal không có trong fixture, thời hạn hết hiệu lực và các trường OBO trong ledger.
-- Giới hạn: `--as` chỉ chọn principal giả lập từ `data/principals.json`, chưa xác thực người dùng thật. CP3d sẽ kiểm riêng việc không đọc khách chỉ xuất hiện trong text của attacker; CP3e sẽ kiểm hash chain và ledger thật.
+- Giới hạn: `--as` chỉ chọn principal giả lập từ `data/principals.json`, chưa xác thực người dùng thật. CP3d kiểm riêng việc không đọc khách chỉ xuất hiện trong text của attacker; CP3e sẽ kiểm hash chain và ledger thật.
+
+## CP3d — tách Run A/Run B và chặn injection
+
+- Lệnh đã chạy: `.venv/bin/python -m pytest tests/test_split.py tests/test_injection.py tests/test_runner_redaction.py -q --basetemp=.pytest_tmp`.
+- Kết quả: 10 passed trong 0.58 giây, không có test bị skip. `KH-000777` chỉ xuất hiện trong text attacker nên Run B không đọc; Run B vẫn đọc được khách gắn với ticket hợp lệ dưới `dpo`. Cả bốn lure đều bị chặn dưới `support_l1` và `dpo`; test riêng xác nhận PII trong ticket được che trước khi đưa cho hàm tóm tắt.
+- Lượt chạy đầu bằng Python hệ thống trong sandbox lỗi ở fixture sink vì không được mở socket localhost. Chạy lại bằng Python của `.venv` với quyền localhost thì các test pass. Đây là hạn chế môi trường chạy test, không phải lỗi của runner.
+- Giới hạn: test dùng sink riêng và reset log sau mỗi ca, nên `reports/sink.log` sau pytest không phải bằng chứng before/after. CP5 sẽ tạo `reports/attack-after.log` bằng lượt chạy CLI riêng.
