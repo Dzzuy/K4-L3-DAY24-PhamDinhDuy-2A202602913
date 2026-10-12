@@ -30,10 +30,50 @@ set ở tests/vn_pii_testset.jsonl):
 """
 from __future__ import annotations
 
+import re
+
+
+_BANK_ACCOUNT = re.compile(
+    r"\b(?:STK|số\s+tài\s+khoản|so\s+tai\s+khoan)\b\s*[:#-]?\s*"
+    r"(?P<value>\d{8,16})(?!\d)",
+    re.IGNORECASE,
+)
+_EMAIL = re.compile(r"(?<![\w.+-])[\w.+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+\b")
+_PHONE = re.compile(r"(?<!\d)0\d{9,10}(?!\d)")
+_CCCD = re.compile(r"(?<!\d)\d{12}(?!\d)")
+
+
+def _overlaps(start: int, end: int, entities: list[dict]) -> bool:
+    return any(start < entity["end"] and entity["start"] < end for entity in entities)
+
 
 def detect(text: str) -> list[dict]:
-    raise NotImplementedError("BƯỚC 3a: implement PII detection")
+    """Return non-overlapping PII spans in the original text."""
+    if not isinstance(text, str):
+        raise TypeError("text must be a string")
+
+    entities: list[dict] = []
+    patterns = (
+        ("VN_BANK_ACCOUNT", _BANK_ACCOUNT, "value"),
+        ("EMAIL", _EMAIL, 0),
+        ("VN_PHONE", _PHONE, 0),
+        ("VN_CCCD", _CCCD, 0),
+    )
+    for entity_type, pattern, group in patterns:
+        for match in pattern.finditer(text):
+            start, end = match.span(group)
+            if not _overlaps(start, end, entities):
+                entities.append({"type": entity_type, "start": start, "end": end})
+    return sorted(entities, key=lambda entity: entity["start"])
 
 
 def redact(text: str) -> str:
-    raise NotImplementedError("BƯỚC 3a: implement PII redaction")
+    """Replace detected spans without invalidating earlier offsets."""
+    redacted = text
+    for entity in reversed(detect(text)):
+        redacted = (
+            redacted[:entity["start"]]
+            + f"[REDACTED_{entity['type']}]"
+            + redacted[entity["end"]:]
+        )
+    return redacted
