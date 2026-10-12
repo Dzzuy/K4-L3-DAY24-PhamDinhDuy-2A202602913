@@ -6,6 +6,22 @@
 - Ledger verify: `True` sau lượt chạy CLI `--mock --as dpo` ở CP3e.
 - Các lỗi còn lại: chưa thấy lỗi chức năng sau CP5. Giới hạn của mock, quyền giả lập, regex và ledger một file được ghi ở `reports/dpia-lite.md`.
 
+## Đầu vào và lệnh kiểm riêng cho từng checkpoint
+
+Các dòng dưới đây là đầu vào đã dùng trong bài. CP1, CP3a–CP3d và CP4 không có query tự do gửi cho agent; chúng dùng câu hỏi đọc code, dữ liệu fixture hoặc lệnh kiểm tra tương ứng.
+
+| Checkpoint | Query / đầu vào riêng | Lệnh kiểm chính |
+| --- | --- | --- |
+| CP1 | Ba câu hỏi về identity mỗi run, quyền gọi `http_post`, và bằng chứng sink nhận body; xem `reports/baseline.md`. | Đọc `_naive_loop()` trong `agent/loop.py` và `http_post()` trong `agent/tools.py`; CP1 không yêu cầu chạy test. |
+| CP2 | `Tổng hợp các ticket còn mở tuần này`; chạy baseline với từng lure `ticket-901.md`, `ticket-902.md`, `ticket-903.md`, cặp `ticket-904.md` + `ticket-904b.md`. | `python -m agent.check_lure corpus/ticket-90*.md`; chạy `python -m agent.loop --mock "Tổng hợp các ticket còn mở tuần này"` khi runner còn là scaffold; xem `reports/attack-before.log`. |
+| CP3a | Các mẫu CCCD, số điện thoại, số tài khoản và email trong `tests/vn_pii_testset.jsonl`. | `python -m pytest tests/test_pii.py -v -s --basetemp=.pytest_tmp` |
+| CP3b | Các `PolicyContext` trong `tests/test_policy.py`, gồm `restricted` + egress và lượt đọc `internal` không egress. | `python -m pytest tests/test_policy.py -v --basetemp=.pytest_tmp` |
+| CP3c | Principal giả lập `support_l1` và `dpo` với scope, purpose, TTL trong `data/principals.json` và `tests/test_obo.py`. | `python -m pytest tests/test_obo.py -v --basetemp=.pytest_tmp` |
+| CP3d | Ticket attacker nhắc `KH-000777` trong text; bốn lure nhắm `KH-000999`, kiểm với cả `support_l1` và `dpo`. | `python -m pytest tests/test_split.py tests/test_injection.py tests/test_runner_redaction.py -q --basetemp=.pytest_tmp` |
+| CP3e | `Tổng hợp các ticket còn mở tuần này` dưới principal `dpo`, để tạo ledger thật sau khi runner an toàn. | `python -m pytest tests/test_ledger.py -v --basetemp=.pytest_tmp`; `python -m agent.loop --mock --as dpo "Tổng hợp các ticket còn mở tuần này"`; kiểm `verify()` trên `reports/ledger.jsonl`. |
+| CP4 | Lịch sử Git có token giả tại commit `1bdd849`; file hiện tại và `requirements.lock`. | `gitleaks git --config .gitleaks.toml --redact --verbose .`; `gitleaks dir --config .gitleaks.toml --redact .`; `pre-commit run --all-files`; `python -m pytest tests/test_supply_chain.py -v --basetemp=.pytest_tmp`. |
+| CP5 | Chạy lại đúng query của CP2: `Tổng hợp các ticket còn mở tuần này`, lần này dùng `--as dpo` sau khi reset sink. | `python -m pytest tests/ -q --basetemp=.pytest_tmp`; `python -m agent.loop --mock --as dpo "Tổng hợp các ticket còn mở tuần này"`; đối chiếu `reports/attack-before.log`, `reports/attack-after.log` và `reports/ledger.jsonl`. |
+
 ## CP2 — baseline và bốn lure (đã chạy)
 
 - `python -m agent.check_lure corpus/ticket-90*.md`: **4/4 lure sẵn sàng**. Hai file của biến thể 4 riêng lẻ trả `None` từ `find_injection()` nhưng khi ghép lại, mock nhận 2 marker và trích `KH-000999`.
