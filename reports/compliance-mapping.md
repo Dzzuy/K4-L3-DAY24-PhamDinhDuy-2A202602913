@@ -1,10 +1,10 @@
-# Compliance mapping — điền trong checkpoint 5
+# Compliance mapping — checkpoint 5
 
 | Nguồn / yêu cầu | Control đã làm | Evidence file:dòng | Giới hạn |
 |---|---|---|---|
-| Luật 91/2025/QH15 | | | |
-| NĐ 356/2025/NĐ-CP | | | |
-| Luật AI 134/2025/QH15 | | | |
-| OWASP ASI01, ASI03, ASI04 | | | |
+| [Luật Bảo vệ dữ liệu cá nhân 91/2025/QH15](https://vanban.chinhphu.vn/?classid=1&docid=214590&pageid=27160&typegroupid=3) | Che các mẫu CCCD, số điện thoại, STK, email trước khi tóm tắt; policy chặn dữ liệu `restricted` ở run có egress. | `agent/pii.py:50`, `agent/pii.py:70`, `agent/runner.py:147`, `agent/policy.py:65`, `reports/verification.md` mục CP3a/CP5 | Đây là đối chiếu theo chủ đề bảo vệ dữ liệu cá nhân. Điều khoản áp dụng cụ thể **chưa xác minh**; dữ liệu trong lab là synthetic, không chứng minh tuân thủ pháp luật. |
+| [Nghị định 356/2025/NĐ-CP](https://vanban.chinhphu.vn/?classid=1&docid=216387&pageid=27160) | Giới hạn quyền theo principal, mục đích và thời hạn; ghi lý do allow/deny vào ledger. | `agent/policy.py:77`, `agent/policy.py:91`, `agent/runner.py:108`, `agent/runner.py:109`, `reports/ledger.jsonl` | Đã xác minh tên văn bản và quan hệ hướng dẫn Luật 91/2025 từ nguồn chính thức; điều khoản cụ thể **chưa xác minh**. `--as` là quyền giả lập, ledger không phải hệ thống audit bất biến. |
+| [Luật Trí tuệ nhân tạo 134/2025/QH15](https://vanban.chinhphu.vn/?classid=1&docid=216334&orggroupid=1&pageid=27160) | Thử hành vi agent với mock cố định; đặt cổng quyết định trước tool và giữ bằng chứng before/after để giải thích hành động. | `agent/runner.py:96`, `agent/runner.py:180`, `reports/attack-before.log:1`, `reports/verification.md` mục CP5 | Đây là liên hệ theo chủ đề quản trị rủi ro AI; điều khoản cụ thể **chưa xác minh**. Không suy ra mô hình thật hoặc hệ thống production đã an toàn. |
+| [OWASP Top 10 for Agentic Applications 2026 — ASI01, ASI03, ASI04](https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/) | ASI01: tách ticket không tin cậy khỏi quyết định đọc hồ sơ; ASI03: giao quyền principal/agent và kiểm TTL; ASI04: pin hook, khóa dependency có hash và quét token giả trong lịch sử. | `agent/runner.py:127`, `agent/runner.py:151`, `agent/policy.py:84`, `.pre-commit-config.yaml:2`, `requirements.lock`, `reports/secrets-incident.md:3` | Chỉ là mapping kiểm soát trong lab. Hook và scanner không thay việc thu hồi secret thật; chưa thử MCP/runtime supply chain. |
 
-Chỉ ghi điều khoản cụ thể khi đã đối chiếu văn bản gốc. Mô phỏng kỹ thuật không tự chứng minh tuân thủ pháp luật.
+Đã kiểm tên các văn bản trên cổng Chính phủ và tên rủi ro trên nguồn OWASP. Chưa đối chiếu từng điều khoản trong toàn văn để xác định nghĩa vụ pháp lý cụ thể; các dòng pháp lý ở trên chỉ nêu chủ đề và ghi rõ giới hạn. Mô phỏng kỹ thuật không tự chứng minh tuân thủ pháp luật.

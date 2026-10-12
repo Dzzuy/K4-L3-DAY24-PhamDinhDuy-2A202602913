@@ -1,6 +1,6 @@
-# DPIA-lite — điền trong checkpoint 5
+# DPIA-lite — checkpoint 5
 
-1. Loại dữ liệu và phân loại:
-2. Mục đích xử lý và principal:
-3. Dữ liệu đi qua những run/tool nào, endpoint nào:
-4. Bằng chứng deny/allow và giới hạn của mock:
+1. **Loại dữ liệu và phân loại:** Ticket trong `corpus/` là nội dung không đáng tin do bên khác viết; hồ sơ trong `data/customers.json` chứa tên, CCCD, số điện thoại, STK và email giả. Runner coi việc đọc hồ sơ là `restricted`; nội dung ticket dùng để tóm tắt được che các mẫu PII trước khi chuyển cho hàm tóm tắt.
+2. **Mục đích và principal:** `support_l1` được tìm ticket để tóm tắt, không được đọc hồ sơ riêng. `dpo` được đọc hồ sơ liên quan để trả lời hỗ trợ (`support-reply`), nhưng vẫn không được gửi dữ liệu `restricted` từ run có egress. `--as` chỉ chọn principal trong fixture, không xác thực người đang dùng CLI.
+3. **Đường đi của dữ liệu:** Run A gọi `search_docs` và chỉ đưa mã ticket dạng số lấy từ tên file sang Run B. Run B kiểm policy, tra `related_tickets` trong dữ liệu tin cậy, rồi kiểm lại ngay trước `read_customer`. Nếu ticket cài yêu cầu gửi dữ liệu, một lượt policy riêng ghi `http_post` deny; không gọi tool gửi. Sink chỉ nghe ở `127.0.0.1:10024`; ledger ghi hash tham số, quyết định và lý do, không ghi hồ sơ thô.
+4. **Bằng chứng và giới hạn:** `reports/attack-before.log` có 4 POST synthetic trước containment; `reports/attack-after.log` có 0 byte khi replay cùng câu hỏi dưới `dpo`. Bộ test có 34 pass; `reports/ledger.jsonl` có deny `http_post` với reason và `verify()` trả `True`. Regex PII chỉ được đo trên bộ mẫu của lab; mock và fixture quyền không thay đánh giá production. Hash chain một file không phát hiện được việc cắt dòng cuối nếu thiếu mốc tin cậy bên ngoài. Đây là ghi chú học tập, không phải hồ sơ đánh giá tác động pháp lý chính thức.

@@ -1,10 +1,10 @@
 # Verification — điền trước khi nộp
 
 - OS / Python / Gitleaks version: Linux; Python 3.12.14 trong `.venv`; Gitleaks 8.30.1 (archive Linux x64 đã kiểm checksum).
-- `python -m pytest tests/ -q`:
+- `python -m pytest tests/ -q`: `.venv/bin/python -m pytest tests/ -q --basetemp=.pytest_tmp` ở CP5: 34 passed trong 0.61 giây, 0 skip.
 - `pre-commit run --all-files`: hook Gitleaks pass ở CP4.
 - Ledger verify: `True` sau lượt chạy CLI `--mock --as dpo` ở CP3e.
-- Các lỗi còn lại: chưa thấy lỗi chức năng đến hết CP4; CP5 chưa được kiểm.
+- Các lỗi còn lại: chưa thấy lỗi chức năng sau CP5. Giới hạn của mock, quyền giả lập, regex và ledger một file được ghi ở `reports/dpia-lite.md`.
 
 ## CP2 — baseline và bốn lure (đã chạy)
 
@@ -54,3 +54,12 @@
 - Cài hook bằng `pre-commit install`; `pre-commit run --all-files` pass.
 - `.venv/bin/python -m pytest tests/test_supply_chain.py -v --basetemp=.pytest_tmp`: 3 test passed trong 0.02 giây.
 - Lượt `piptools compile` đầu bị lỗi cache ngoài workspace không ghi được; sau khi chuyển cache sang `/tmp`, lượt trong sandbox bị chặn DNS PyPI. Chạy lại với quyền mạng đã tạo lock thành công. Gitleaks không có sẵn trong PATH nên đã tải bản chính thức vào `.venv/bin` và kiểm checksum trước khi chạy.
+
+## CP5 — kiểm lại cùng tình huống
+
+- Chạy `.venv/bin/python -m pytest tests/ -q --basetemp=.pytest_tmp`: 34 passed trong 0.61 giây, 0 skip.
+- Reset sink sau pytest, bật sink localhost và chạy `.venv/bin/python -m agent.loop --mock --as dpo "Tổng hợp các ticket còn mở tuần này"`. CLI tổng hợp 45 ticket.
+- `reports/attack-before.log` còn 4 dòng POST synthetic; `reports/attack-after.log` lấy từ lượt replay mới dài 0 byte. Test tự reset sink nên không dùng `sink.log` sau pytest để kết luận.
+- `reports/ledger.jsonl` có 48 dòng sau hai lượt `dpo`; `verify()` trả `True`, tất cả dòng có reason. Có 2 dòng `http_post` deny, dòng mới nhất ghi `on_behalf_of=dpo` và lý do `Dữ liệu restricted không được đi qua run có egress`.
+- Đã điền `reports/compliance-mapping.md` với nguồn chính thức, control và file:dòng; điều khoản pháp luật cụ thể ghi **chưa xác minh**. `reports/dpia-lite.md` nêu dữ liệu, mục đích, đường đi, bằng chứng và giới hạn.
+- Kiểm cuối: `check_lure` báo 4/4 sẵn sàng; `pre-commit run --all-files` pass; `gitleaks dir --config .gitleaks.toml --redact .` sạch (exit 0); `git diff --check` pass.
